@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — Analyze Your Resume{% endblock %}
+
+{% block head %}
+<style>
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+  @media(max-width:620px){.form-grid{grid-template-columns:1fr}}
+  .upload-zone{border:1.5px dashed var(--border);border-radius:10px;padding:2rem 1rem;
+               text-align:center;cursor:pointer;min-height:190px;display:flex;
+               flex-direction:column;align-items:center;justify-content:center;gap:10px;
+               transition:border-color .2s,background .2s}
+  .upload-zone:hover{border-color:var(--accent);background:#f0f5f2}
+  .upload-zone.has-file{border-style:solid;border-color:var(--accent);background:var(--accent-l)}
+  .uz-icon{width:46px;height:46px;background:var(--bg);border-radius:10px;
+           display:flex;align-items:center;justify-content:center}
+  .uz-icon svg{width:22px;height:22px;stroke:var(--muted)}
+  .upload-zone p{font-size:13px;color:var(--muted)}
+  .upload-zone .uz-name{font-size:13px;font-weight:500;color:var(--accent)}
+  .upload-zone .uz-hint{font-size:11px;color:var(--muted)}
+  .bottom-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+              box-shadow:var(--sh);padding:1.25rem 1.5rem;display:flex;gap:16px;align-items:flex-end}
+  @media(max-width:540px){.bottom-bar{flex-direction:column}}
+  .bottom-bar .field{flex:1}
+  .bottom-bar label{font-size:12px;font-weight:500;color:var(--muted);display:block;margin-bottom:6px}
+  #results{display:none;margin-top:2rem}
+  .spinner{display:none;width:18px;height:18px;border:2px solid rgba(255,255,255,.4);
+           border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .arc{transition:stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>AI Resume Analyzer</h1>
+  <p>Upload your resume and paste a job description — get an instant match score, extracted skills, and tailored improvement tips.</p>
+</div>
+
+<div id="errorBox" style="display:none" class="flash flash-error"></div>
+
+<!-- Upload form -->
+<div class="form-grid">
+  <!-- Resume upload -->
+  <div class="card">
+    <div class="card-body">
+      <div class="card-label"><span class="dot dot-g"></span> Your resume</div>
+      <div class="upload-zone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <div class="uz-icon">
+          <svg fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 4v12m-4-4l4-4 4 4"/>
+          </svg>
+        </div>
+        <p id="uz-main">Click to upload your resume</p>
+        <p class="uz-hint" id="uz-sub">PDF or DOCX — max 5 MB</p>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf,.docx" style="display:none" onchange="handleFile(event)">
+    </div>
+  </div>
+
+  <!-- Job description -->
+  <div class="card">
+    <div class="card-body">
+      <div class="card-label"><span class="dot dot-b"></span> Job description</div>
+      <textarea id="jobDesc" placeholder="Paste the full job description here...&#10;&#10;Include responsibilities, required skills, and qualifications for the most accurate analysis."></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- Job title + submit -->
+<div class="bottom-bar">
+  <div class="field">
+    <label>Job title (optional)</label>
+    <input type="text" id="jobTitle" placeholder="e.g. Software Engineer, Data Analyst…">
+  </div>
+  <button class="btn btn-primary btn-lg" id="analyzeBtn" onclick="analyze()" disabled style="width:auto;padding:13px 32px">
+    <span id="btnText">Analyze resume</span>
+    <div class="spinner" id="spinner"></div>
+  </button>
+</div>
+
+<!-- Results -->
+<div id="results">
+
+  <!-- Score card -->
+  <div class="card gap">
+    <div class="score-wrap">
+      <div class="ring">
+        <svg viewBox="0 0 110 110">
+          <circle cx="55" cy="55" r="46" fill="none" stroke="var(--bg)" stroke-width="9"/>
+          <circle id="arc" cx="55" cy="55" r="46" fill="none" stroke="#2a5c3f" stroke-width="9"
+            stroke-linecap="round" stroke-dasharray="289" stroke-dashoffset="289"
+            transform="rotate(-90 55 55)" class="arc"/>
+        </svg>
+        <div class="ring-num">
+          <b id="scoreNum">—</b>
+          <small>match</small>
+        </div>
+      </div>
+      <div class="score-info">
+        <h2 id="scoreTitle">—</h2>
+        <p id="scoreDesc">—</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric"><div class="val" id="m1">—</div><div class="lbl">Skills matched</div></div>
+    <div class="metric"><div class="val" id="m2">—</div><div class="lbl">Keywords found</div></div>
+    <div class="metric"><div class="val" id="m3">—</div><div class="lbl">Missing skills</div></div>
+  </div>
+
+  <!-- Skills columns -->
+  <div class="two-col gap">
+    <div class="card"><div class="card-body">
+      <div class="card-label"><span class="dot dot-g"></span> Matched skills</div>
+      <div id="matchedTags"></div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <div class="card-label"><span class="dot dot-r"></span> Missing from resume</div>
+      <div id="missingTags"></div>
+    </div></div>
+  </div>
+
+  <!-- Education + Experience -->
+  <div class="two-col gap" id="eduExpRow">
+    <div class="card"><div class="card-body">
+      <div class="card-label">Education detected</div>
+      <div id="eduList" style="font-size:13px;color:var(--muted);line-height:1.8"></div>
+    </div></div>
+    <div class="card"><div class="card-body">
+      <div class="card-label">Experience lines</div>
+      <div id="expList" style="font-size:13px;color:var(--muted);line-height:1.8"></div>
+    </div></div>
+  </div>
+
+  <!-- Suggestions -->
+  <div class="card gap"><div class="card-body">
+    <div class="card-label">Suggestions to improve your resume</div>
+    <div id="tipsList"></div>
+  </div></div>
+
+  <!-- Save link -->
+  <div style="margin-top:1.25rem;display:flex;gap:10px;align-items:center">
+    <a id="viewLink" href="#" class="btn btn-outline" style="font-size:13px">View saved result →</a>
+    <a href="/history" class="btn btn-outline" style="font-size:13px">See all history</a>
+  </div>
+</div>
+
+<script>
+  let fileReady = false;
+
+  document.getElementById('jobDesc').addEventListener('input', checkReady);
+
+  function handleFile(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    fileReady = true;
+    const zone = document.getElementById('dropzone');
+    zone.classList.add('has-file');
+    document.getElementById('uz-main').textContent = f.name;
+    document.getElementById('uz-sub').textContent = (f.size/1024).toFixed(0) + ' KB';
+    checkReady();
+  }
+
+  // Drag and drop
+  const dz = document.getElementById('dropzone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.background='#e8f4ec'; });
+  dz.addEventListener('dragleave', () => { dz.style.background=''; });
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.style.background='';
+    const f = e.dataTransfer.files[0];
+    if (f) { document.getElementById('fileInput').files = e.dataTransfer.files; handleFile({target:{files:[f]}}); }
+  });
+
+  function checkReady() {
+    const jd = document.getElementById('jobDesc').value.trim();
+    document.getElementById('analyzeBtn').disabled = !(fileReady && jd.length > 30);
+  }
+
+  async function analyze() {
+    const jd = document.getElementById('jobDesc').value.trim();
+    const jt = document.getElementById('jobTitle').value.trim();
+    const file = document.getElementById('fileInput').files[0];
+
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('analyzeBtn').disabled = true;
+    document.getElementById('btnText').textContent = 'Analyzing…';
+    document.getElementById('spinner').style.display = 'block';
+    document.getElementById('results').style.display = 'none';
+
+    const fd = new FormData();
+    fd.append('resume', file);
+    fd.append('job_desc', jd);
+    fd.append('job_title', jt || 'Job Role');
+
+    try {
+      const res = await fetch('/analyze', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) { showError(data.error); return; }
+      showResults(data);
+    } catch(e) {
+      showError('Something went wrong. Please try again.');
+    } finally {
+      document.getElementById('analyzeBtn').disabled = false;
+      document.getElementById('btnText').textContent = 'Analyze resume';
+      document.getElementById('spinner').style.display = 'none';
+    }
+  }
+
+  function showError(msg) {
+    const b = document.getElementById('errorBox');
+    b.textContent = msg; b.style.display = 'block';
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function showResults(d) {
+    // Score
+    document.getElementById('scoreNum').textContent = d.score + '%';
+    const arc = document.getElementById('arc');
+    const offset = 289 - (289 * d.score / 100);
+    arc.style.stroke = d.score >= 75 ? '#2a5c3f' : d.score >= 50 ? '#274e7a' : '#a63030';
+    setTimeout(() => arc.style.strokeDashoffset = offset, 80);
+
+    const titles = {h:'Strong match',m:'Moderate match',l:'Low match'};
+    const descs  = {
+      h:'Your resume is well-aligned with this role. Focus on quantifying achievements to stand out.',
+      m:'You cover the core requirements but some key skills are missing. See suggestions below.',
+      l:'Your resume needs significant tailoring. Mirror the job description language closely.'
+    };
+    const k = d.score >= 75 ? 'h' : d.score >= 50 ? 'm' : 'l';
+    document.getElementById('scoreTitle').textContent = titles[k];
+    document.getElementById('scoreDesc').textContent  = descs[k];
+
+    // Metrics
+    document.getElementById('m1').textContent = d.matched.length;
+    document.getElementById('m2').textContent = d.keywords;
+    document.getElementById('m3').textContent = d.missing.length;
+
+    // Tags
+    const mt = document.getElementById('matchedTags'); mt.innerHTML = '';
+    if (d.matched.length) d.matched.forEach(s => { const t=document.createElement('span'); t.className='tag tag-g'; t.textContent=s; mt.appendChild(t); });
+    else mt.innerHTML = '<span style="font-size:13px;color:var(--muted)">None detected</span>';
+
+    const ms = document.getElementById('missingTags'); ms.innerHTML = '';
+    if (d.missing.length) d.missing.forEach(s => { const t=document.createElement('span'); t.className='tag tag-r'; t.textContent=s; ms.appendChild(t); });
+    else ms.innerHTML = '<span style="font-size:13px;color:var(--accent)">No missing skills — great!</span>';
+
+    // Education & Experience
+    const edu = document.getElementById('eduList');
+    edu.innerHTML = d.education && d.education.length ? d.education.map(e=>`<div>• ${e}</div>`).join('') : '<span style="color:var(--muted)">Not detected (plain text parsing may miss formatted PDFs)</span>';
+    const exp = document.getElementById('expList');
+    exp.innerHTML = d.experience && d.experience.length ? d.experience.map(e=>`<div>• ${e}</div>`).join('') : '<span style="color:var(--muted)">Not detected</span>';
+
+    // Tips
+    const tl = document.getElementById('tipsList'); tl.innerHTML = '';
+    const icons = {warn:'⚠',info:'ℹ',ok:'✓'};
+    d.suggestions.forEach(t => {
+      const div = document.createElement('div');
+      div.className = `tip tip-${t.type}`;
+      div.innerHTML = `<div class="tip-icon">${icons[t.type]||'ℹ'}</div>
+        <div class="tip-body"><strong>${t.title}</strong><span>${t.text}</span></div>`;
+      tl.appendChild(div);
+    });
+
+    // Link to saved result
+    document.getElementById('viewLink').href = '/result/' + d.id;
+
+    document.getElementById('results').style.display = 'block';
+    document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+  }
+</script>
+{% endblock %}

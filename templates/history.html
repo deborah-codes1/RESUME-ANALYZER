@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — History{% endblock %}
+
+{% block head %}
+<style>
+  .hist-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:1rem;
+            padding:1rem 1.5rem;border-bottom:1px solid var(--border);transition:background .15s}
+  .hist-row:last-child{border-bottom:none}
+  .hist-row:hover{background:#fafaf8}
+  .hist-meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .hist-score{font-size:22px;font-weight:500;min-width:52px;text-align:right}
+  .hist-actions{display:flex;gap:8px;align-items:center}
+  .score-h{color:var(--accent)} .score-m{color:var(--info)} .score-l{color:var(--danger)}
+  .pill{display:inline-block;font-size:11px;font-weight:500;padding:2px 9px;border-radius:20px;margin-left:6px}
+  .pill-h{background:var(--accent-l);color:var(--accent)}
+  .pill-m{background:var(--info-l);color:var(--info)}
+  .pill-l{background:var(--danger-l);color:var(--danger)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>Analysis History</h1>
+  <p>All saved resume analyses — up to the last 30.</p>
+</div>
+
+{% if records %}
+<div class="card">
+  {% for r in records %}
+  {% set k = 'h' if r.score >= 75 else ('m' if r.score >= 50 else 'l') %}
+  {% set label = 'Strong' if k=='h' else ('Moderate' if k=='m' else 'Weak') %}
+  <div class="hist-row">
+    <div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+        <strong style="font-size:15px">{{ r.filename }}</strong>
+        <span class="pill pill-{{ k }}">{{ label }}</span>
+      </div>
+      <div class="hist-meta">
+        {{ r.job_title }} &nbsp;·&nbsp; {{ r.created_at }}
+        &nbsp;·&nbsp; {{ r.matched|length }} skills matched
+      </div>
+    </div>
+    <div class="hist-actions">
+      <span class="hist-score score-{{ k }}">{{ r.score }}%</span>
+      <a href="/result/{{ r.id }}" class="btn btn-outline" style="font-size:12px;padding:7px 14px">View</a>
+      <form method="POST" action="/delete/{{ r.id }}" onsubmit="return confirm('Delete this analysis?')">
+        <button type="submit" class="btn btn-danger" style="font-size:12px;padding:7px 14px">Delete</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty">
+    <h3>No analyses yet</h3>
+    <p>Upload your first resume to get started.</p>
+    <a href="/" class="btn btn-primary" style="margin-top:1.25rem;display:inline-flex">Analyze a resume</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

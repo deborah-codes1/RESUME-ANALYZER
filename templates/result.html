@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}ResumeAI — {{ rec.job_title }}{% endblock %}
+
+{% block head %}
+<style>
+  .arc{transition:stroke-dashoffset 1.1s cubic-bezier(.4,0,.2,1)}
+  {% set k = 'h' if rec.score >= 75 else ('m' if rec.score >= 50 else 'l') %}
+  .ring-color{stroke:{{ '#2a5c3f' if k=='h' else ('#274e7a' if k=='m' else '#a63030') }}}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set k = 'h' if rec.score >= 75 else ('m' if rec.score >= 50 else 'l') %}
+
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:2rem;flex-wrap:wrap">
+  <a href="/history" class="btn btn-outline" style="font-size:13px">← History</a>
+  <h1 style="font-family:'DM Serif Display',serif;font-size:28px;letter-spacing:-.4px">{{ rec.job_title }}</h1>
+  <span style="font-size:13px;color:var(--muted)">{{ rec.created_at }}</span>
+</div>
+
+<!-- Score -->
+<div class="card gap">
+  <div class="score-wrap">
+    <div class="ring">
+      <svg viewBox="0 0 110 110">
+        <circle cx="55" cy="55" r="46" fill="none" stroke="var(--bg)" stroke-width="9"/>
+        <circle id="arc" cx="55" cy="55" r="46" fill="none" stroke="#ccc" stroke-width="9"
+          stroke-linecap="round" stroke-dasharray="289"
+          stroke-dashoffset="{{ (289 - (289 * rec.score / 100))|round|int }}"
+          transform="rotate(-90 55 55)" class="arc ring-color"/>
+      </svg>
+      <div class="ring-num">
+        <b>{{ rec.score }}%</b>
+        <small>match</small>
+      </div>
+    </div>
+    <div class="score-info">
+      <h2>{{ 'Strong match' if k=='h' else ('Moderate match' if k=='m' else 'Low match') }}</h2>
+      <p>
+        {% if k=='h' %}Your resume is well-aligned with this role. Focus on quantifying achievements.
+        {% elif k=='m' %}You cover the core requirements but some key skills are missing.
+        {% else %}Your resume needs significant tailoring to match this role.{% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Metrics -->
+<div class="metrics">
+  <div class="metric"><div class="val">{{ rec.matched|length }}</div><div class="lbl">Skills matched</div></div>
+  <div class="metric"><div class="val">{{ rec.keywords }}</div><div class="lbl">Keywords found</div></div>
+  <div class="metric"><div class="val">{{ rec.missing|length }}</div><div class="lbl">Missing skills</div></div>
+</div>
+
+<!-- Skills -->
+<div class="two-col gap">
+  <div class="card"><div class="card-body">
+    <div class="card-label"><span class="dot dot-g"></span> Matched skills</div>
+    {% if rec.matched %}
+      {% for s in rec.matched %}<span class="tag tag-g">{{ s }}</span>{% endfor %}
+    {% else %}<span style="font-size:13px;color:var(--muted)">None detected</span>{% endif %}
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="card-label"><span class="dot dot-r"></span> Missing from resume</div>
+    {% if rec.missing %}
+      {% for s in rec.missing %}<span class="tag tag-r">{{ s }}</span>{% endfor %}
+    {% else %}<span style="font-size:13px;color:var(--accent)">No missing skills!</span>{% endif %}
+  </div></div>
+</div>
+
+<!-- Suggestions -->
+<div class="card gap"><div class="card-body">
+  <div class="card-label">Improvement suggestions</div>
+  {% for t in rec.suggestions %}
+  <div class="tip tip-{{ t.type }}">
+    <div class="tip-icon">{{ '⚠' if t.type=='warn' else ('✓' if t.type=='ok' else 'ℹ') }}</div>
+    <div class="tip-body">
+      <strong>{{ t.title }}</strong>
+      <span>{{ t.text }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div></div>
+
+<!-- Actions -->
+<div style="margin-top:1.5rem;display:flex;gap:10px;flex-wrap:wrap">
+  <a href="/" class="btn btn-primary">Analyze another resume</a>
+  <form method="POST" action="/delete/{{ rec.id }}" onsubmit="return confirm('Delete this analysis?')">
+    <button type="submit" class="btn btn-danger">Delete this result</button>
+  </form>
+</div>
+{% endblock %}

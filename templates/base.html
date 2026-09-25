@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}ResumeAI{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#f4f2ed; --surface:#fff; --border:#e0dbd3; --text:#18160f;
+      --muted:#7a7268; --accent:#2a5c3f; --accent-l:#e6f0ea;
+      --gold:#b5893a; --gold-l:#f8f2e4;
+      --danger:#a63030; --danger-l:#fbeeee;
+      --info:#274e7a; --info-l:#e8eef6;
+      --warn:#7a5010; --warn-l:#fdf3e4;
+      --r:14px; --sh:0 1px 3px rgba(0,0,0,.07),0 4px 18px rgba(0,0,0,.05);
+    }
+    body{font-family:'DM Sans',sans-serif;font-size:15px;background:var(--bg);color:var(--text);min-height:100vh}
+    nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100}
+    .brand{font-family:'DM Serif Display',serif;font-size:21px;color:var(--text);text-decoration:none;letter-spacing:-.4px}
+    .brand em{color:var(--accent);font-style:normal}
+    .nav-links{display:flex;gap:4px}
+    .nav-links a{font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;padding:7px 14px;border-radius:8px;transition:all .15s}
+    .nav-links a:hover{background:var(--bg);color:var(--text)}
+    .nav-links a.on{background:var(--accent-l);color:var(--accent)}
+    main{max-width:880px;margin:0 auto;padding:2.5rem 1.5rem 5rem}
+    .page-head{margin-bottom:2rem}
+    .page-head h1{font-family:'DM Serif Display',serif;font-size:34px;letter-spacing:-.5px;line-height:1.15;margin-bottom:6px}
+    .page-head p{font-size:14px;color:var(--muted)}
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh)}
+    .card-body{padding:1.5rem}
+    .card-label{font-size:11px;font-weight:500;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+    .dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+    .dot-g{background:var(--accent)} .dot-r{background:var(--danger)} .dot-b{background:var(--info)}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:9px;font-size:14px;font-weight:500;cursor:pointer;border:none;text-decoration:none;transition:all .15s;font-family:'DM Sans',sans-serif}
+    .btn:hover{opacity:.85} .btn:active{transform:scale(.98)}
+    .btn-primary{background:var(--accent);color:#fff}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+    .btn-danger{background:var(--danger-l);color:var(--danger);border:1px solid #edc8c8}
+    .btn-lg{padding:13px 28px;font-size:15px;width:100%;justify-content:center}
+    input[type=text],textarea{width:100%;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:9px;outline:none;transition:border-color .2s,background .2s;line-height:1.6}
+    input[type=text]{height:42px} textarea{min-height:180px;resize:vertical}
+    input[type=text]:focus,textarea:focus{border-color:var(--accent);background:#fff}
+    input::placeholder,textarea::placeholder{color:#c0baaf}
+    .tag{display:inline-block;font-size:12px;font-weight:500;padding:3px 11px;border-radius:20px;margin:3px 3px 0 0}
+    .tag-g{background:var(--accent-l);color:var(--accent)}
+    .tag-r{background:var(--danger-l);color:var(--danger)}
+    .tag-b{background:var(--info-l);color:var(--info)}
+    .tip{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);align-items:flex-start}
+    .tip:last-child{border-bottom:none;padding-bottom:0}
+    .tip-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+    .tip-warn .tip-icon{background:var(--warn-l)} .tip-info .tip-icon{background:var(--info-l)} .tip-ok .tip-icon{background:var(--accent-l)}
+    .tip-body strong{font-size:13px;font-weight:500;color:var(--text);display:block;margin-bottom:2px}
+    .tip-body span{font-size:13px;color:var(--muted);line-height:1.5}
+    .score-wrap{display:flex;align-items:center;gap:2rem;padding:1.75rem 2rem}
+    @media(max-width:520px){.score-wrap{flex-direction:column;align-items:flex-start;gap:1.25rem}}
+    .ring{position:relative;width:110px;height:110px;flex-shrink:0}
+    .ring svg{width:110px;height:110px}
+    .ring-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column}
+    .ring-num b{font-size:28px;font-weight:500} .ring-num small{font-size:11px;color:var(--muted)}
+    .score-info h2{font-family:'DM Serif Display',serif;font-size:24px;margin-bottom:6px}
+    .score-info p{font-size:14px;color:var(--muted);line-height:1.6;max-width:420px}
+    .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
+    @media(max-width:480px){.metrics{grid-template-columns:1fr 1fr}}
+    .metric{background:var(--bg);border-radius:10px;padding:1rem}
+    .metric .val{font-size:26px;font-weight:500} .metric .lbl{font-size:12px;color:var(--muted);margin-top:2px}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    @media(max-width:580px){.two-col{grid-template-columns:1fr}}
+    .gap{margin-top:16px}
+    .empty{text-align:center;padding:4rem 2rem;color:var(--muted)}
+    .empty h3{font-size:18px;margin-bottom:8px;color:var(--text)} .empty p{font-size:14px}
+    .flash{padding:12px 16px;border-radius:9px;font-size:13px;margin-bottom:1rem;border:1px solid}
+    .flash-error{background:var(--danger-l);border-color:#edc8c8;color:var(--danger)}
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<nav>
+  <a href="/" class="brand">Resume<em>AI</em></a>
+  <div class="nav-links">
+    <a href="/" class="{% if request.endpoint=='index' %}on{% endif %}">Analyze</a>
+    <a href="/history" class="{% if request.endpoint=='history' %}on{% endif %}">History</a>
+  </div>
+</nav>
+<main>{% block content %}{% endblock %}</main>
+</body>
+</html>
